@@ -5,6 +5,7 @@
   "dependencies": {
     "@material-ui/core": "^4.11.4",
     "@material-ui/lab": "^4.0.0-alpha.58",
+    "@netlify/functions": "^0.7.2",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -15,7 +16,9 @@
     "firebase-admin": "^9.10.0",
     "firebase-functions": "^3.14.1",
     "jest-extended": "^0.11.5",
+    "lodash": "^4.17.21",
     "moment": "^2.29.1",
+    "node-fetch": "^2.6.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-query": "^3.17.0",
@@ -61,6 +64,7 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",
+    "@types/node-fetch": "^2.5.10",
     "@typescript-eslint/eslint-plugin": "^4.28.0",
     "@typescript-eslint/parser": "^4.28.0",
     "eslint": "^7.29.0",

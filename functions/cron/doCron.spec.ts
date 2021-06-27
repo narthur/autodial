@@ -1,6 +1,6 @@
-import cron from "./cron";
+import doCron from "./doCron";
 import {getUsers} from "./lib/database";
-import {getGoals, updateGoal} from "./lib/beeminder";
+import {getGoal, getGoals, updateGoal} from "./lib/beeminder";
 import {makeGoal} from "./lib/test/helpers";
 import dial from "./lib/dial";
 
@@ -11,7 +11,13 @@ jest.mock("./lib/dial");
 
 const mockGetUsers = getUsers as jest.Mock;
 const mockGetGoals = getGoals as jest.Mock;
+const mockGetGoal = getGoal as jest.Mock;
 const mockDial = dial as jest.Mock;
+
+function setGoal(g: Partial<Goal>) {
+  mockGetGoal.mockResolvedValue(g);
+  mockGetGoals.mockResolvedValue([g]);
+}
 
 describe("function", () => {
   beforeEach(() => {
@@ -24,7 +30,7 @@ describe("function", () => {
   });
 
   it("gets beeminder goals", async () => {
-    await cron();
+    await doCron();
 
     expect(getGoals).toBeCalledWith("the_user", "the_token");
   });
@@ -34,9 +40,9 @@ describe("function", () => {
       fineprint: "#autodial",
     });
 
-    mockGetGoals.mockResolvedValue([goal]);
+    setGoal(goal);
 
-    await cron();
+    await doCron();
 
     expect(dial).toBeCalledWith(goal, expect.anything());
   });
@@ -46,9 +52,9 @@ describe("function", () => {
       fineprint: "#autodialMin=1",
     });
 
-    mockGetGoals.mockResolvedValue([goal]);
+    setGoal(goal);
 
-    await cron();
+    await doCron();
 
     expect(dial).toBeCalledWith(goal, expect.objectContaining({min: 1}));
   });
@@ -58,9 +64,9 @@ describe("function", () => {
       fineprint: "#autodialMax=1",
     });
 
-    mockGetGoals.mockResolvedValue([goal]);
+    setGoal(goal);
 
-    await cron();
+    await doCron();
 
     expect(dial).toBeCalledWith(goal, expect.objectContaining({max: 1}));
   });
@@ -68,9 +74,9 @@ describe("function", () => {
   it("skips goals without hashtag", async () => {
     const goal = makeGoal();
 
-    mockGetGoals.mockResolvedValue([goal]);
+    setGoal(goal);
 
-    await cron();
+    await doCron();
 
     expect(dial).not.toBeCalled();
   });
@@ -82,13 +88,27 @@ describe("function", () => {
       fineprint: "#autodialMin=1",
     });
 
-    mockGetGoals.mockResolvedValue([goal]);
+    setGoal(goal);
 
-    await cron();
+    await doCron();
 
     expect(updateGoal).toBeCalledWith(
         "the_user", "the_token", "the_slug", {roadall: "the_new_road"}
     );
+  });
+
+  it("does not update goal if goal not dialed", async () => {
+    mockDial.mockReturnValue(false);
+
+    const goal = makeGoal({
+      fineprint: "#autodialMin=1",
+    });
+
+    setGoal(goal);
+
+    await doCron();
+
+    expect(updateGoal).not.toBeCalled();
   });
 });
 

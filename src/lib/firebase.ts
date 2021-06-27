@@ -5,8 +5,6 @@ import "firebase/auth";
 let didInit = false;
 
 export function init(): void {
-  console.log("initializing");
-
   if (didInit) return;
 
   didInit = true;

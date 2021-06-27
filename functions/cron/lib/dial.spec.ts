@@ -2,19 +2,29 @@ import dial from "./dial";
 import * as time from "./time";
 import {describe, it} from "@jest/globals";
 import {e, makeGoal} from "./test/helpers";
+import {parseDate} from "./time";
 
-const setNow = (yyyy: number, m: number, d: number) => {
+const setNow = (yyyy: number, m: number, d: number): number => {
   const value: number = Date.UTC(yyyy, m - 1, d, 12) / 1000;
   jest.spyOn(time, "now").mockReturnValue(value);
+  return value;
 };
 
-const expectEndRate = (roadall: Roadall, expected: number) => {
+const expectEndRate = (roadall: Roadall | false, expected: number) => {
+  if (!roadall) {
+    throw new Error("Rate not adjusted");
+  }
+
   const end = roadall[roadall.length - 1];
 
   e(end[2]).toEqual(expected);
 };
 
-const expectFuzzyEndRate = (roadall: Roadall, expected: number) => {
+const expectFuzzyEndRate = (roadall: Roadall | false, expected: number) => {
+  if (!roadall) {
+    throw new Error("Rate not adjusted");
+  }
+
   const end = roadall[roadall.length - 1];
 
   e(end[2]).toFuzzyEqual(expected);
@@ -28,7 +38,10 @@ describe("dial function", () => {
       aggday: "last",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210225", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210225"), null, 1],
+      ],
       datapoints: [],
     }));
 
@@ -42,11 +55,14 @@ describe("dial function", () => {
       aggday: "last",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210201", null, 1]],
-      datapoints: [["20210125", 1, "comment"]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210201"), null, 1],
+      ],
+      datapoints: [{daystamp: "20210125", value: 1}],
     }));
 
-    expectEndRate(r, 1);
+    expect(r).toBeFalsy();
   });
 
   it("dials goal with datapoint after a month", () => {
@@ -56,8 +72,14 @@ describe("dial function", () => {
       aggday: "last",
       kyoom: false,
       runits: "d",
-      roadall: [["20210124", 0, null], ["20210224", null, 1]],
-      datapoints: [["20210124", 0, "initial"], ["20210125", 1, "comment"]],
+      roadall: [
+        [parseDate("20210124"), 0, null],
+        [parseDate("20210224"), null, 1],
+      ],
+      datapoints: [{daystamp: "20210124", value: 0}, {
+        daystamp: "20210125",
+        value: 1,
+      }],
     }));
 
     expectFuzzyEndRate(r, 1 / 30);
@@ -74,22 +96,31 @@ describe("dial function", () => {
       aggday: "last",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
-      datapoints: [["20210125", 1, "comment"]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
+      datapoints: [{daystamp: "20210125", value: 1}],
     }));
 
     expectEndRate(r, 0);
   });
 
   it("dials goal with datapoint after a week with runits=weekly", () => {
-    setNow(2021, 2, 1);
+    setNow(2021, 2, 25);
 
     const r = dial(makeGoal({
       aggday: "last",
       kyoom: false,
       runits: "w",
-      roadall: [["20210125", 0, null], ["20210201", null, 1]],
-      datapoints: [["20210125", 1, "comment"]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210325"), null, 1],
+      ],
+      datapoints: [
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210126", value: 30 / 7},
+      ],
     }));
 
     expectFuzzyEndRate(r, 1);
@@ -99,11 +130,15 @@ describe("dial function", () => {
     setNow(2021, 2, 25);
 
     const r = dial(makeGoal({
+      slug: "my_special_slug",
       aggday: "last",
       kyoom: false,
       runits: "w",
-      roadall: [["20210125", 0, null], ["20210225", null, 1]],
-      datapoints: [["20210126", 1, "comment"]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210225"), null, 1],
+      ],
+      datapoints: [{daystamp: "20210126", value: 1}],
     }),
     {min: 2});
 
@@ -117,11 +152,14 @@ describe("dial function", () => {
       aggday: "last",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 2, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 2},
       ],
     }));
 
@@ -135,11 +173,14 @@ describe("dial function", () => {
       aggday: "first",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 2, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 2},
       ],
     }));
 
@@ -153,11 +194,14 @@ describe("dial function", () => {
       aggday: "sum",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 2, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 2},
       ],
     }));
 
@@ -171,11 +215,14 @@ describe("dial function", () => {
       aggday: "min",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 2, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 2},
       ],
     }));
 
@@ -189,11 +236,14 @@ describe("dial function", () => {
       aggday: "max",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 2, "comment"],
-        ["20210201", 1, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 2},
+        {daystamp: "20210201", value: 1},
       ],
     }));
 
@@ -207,11 +257,14 @@ describe("dial function", () => {
       aggday: "count",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 5, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 5},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -227,11 +280,14 @@ describe("dial function", () => {
       aggday: "count",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 5, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 5},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -245,11 +301,14 @@ describe("dial function", () => {
       aggday: "binary",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 5, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 5},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -263,11 +322,14 @@ describe("dial function", () => {
       aggday: "nonzero",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 0, "comment"],
-        ["20210202", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 0},
+        {daystamp: "20210202", value: 5},
       ],
     }));
 
@@ -281,11 +343,14 @@ describe("dial function", () => {
       aggday: "truemean",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 5, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 5},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -299,11 +364,14 @@ describe("dial function", () => {
       aggday: "mean",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 5, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 5},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -317,11 +385,14 @@ describe("dial function", () => {
       aggday: "uniqmean",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 5, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 5},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -335,12 +406,15 @@ describe("dial function", () => {
       aggday: "median",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 4, "comment"],
-        ["20210201", 5, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 4},
+        {daystamp: "20210201", value: 5},
       ],
     }));
 
@@ -354,11 +428,14 @@ describe("dial function", () => {
       aggday: "cap1",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 1, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 1},
       ],
     }));
 
@@ -372,11 +449,14 @@ describe("dial function", () => {
       aggday: "square",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 2, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 2},
       ],
     }));
 
@@ -390,11 +470,14 @@ describe("dial function", () => {
       aggday: "triangle",
       kyoom: true,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210301", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210301"), null, 1],
+      ],
       datapoints: [
-        ["20210125", 0, "initial"],
-        ["20210201", 1, "comment"],
-        ["20210201", 1, "comment"],
+        {daystamp: "20210125", value: 0},
+        {daystamp: "20210201", value: 1},
+        {daystamp: "20210201", value: 1},
       ],
     }));
 
@@ -402,53 +485,56 @@ describe("dial function", () => {
   });
 
   it("protects akrasia horizon", async () => {
-    setNow(2021, 2, 20);
+    setNow(2021, 3, 1);
 
     const r = dial(makeGoal({
       aggday: "last",
       kyoom: false,
       runits: "d",
-      roadall: [["20210125", 0, null], ["20210325", null, 1]],
+      roadall: [
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210325"), null, 1],
+      ],
       datapoints: [],
     }));
 
-    e(r[1]).toEqual(["20210228", null, 1]);
+    e(r && r[1]).toEqual([parseDate("20210309"), null, 1]);
   });
 
   it("does not add row if last segment starts after horizon", async () => {
-    setNow(2021, 2, 20);
+    setNow(2021, 2, 25);
 
     const r = dial(makeGoal({
       aggday: "last",
       kyoom: false,
       runits: "d",
       roadall: [
-        ["20210125", 0, null],
-        ["20210229", null, 1],
-        ["20210325", null, 1],
+        [parseDate("20210125"), 0, null],
+        [parseDate("20210305"), null, 1],
+        [parseDate("20210325"), null, 1],
       ],
       datapoints: [],
     }));
 
-    e(r.length).toEqual(3);
+    e(r && r.length).toEqual(3);
   });
 
   it("uses fullroad to decide if akrasia boundary needed", async () => {
-    setNow(2021, 2, 20);
+    setNow(2021, 2, 25);
 
     const r = dial(makeGoal({
       aggday: "last",
       kyoom: false,
       runits: "d",
       roadall: [
-        ["20210125", 0, null],
-        [null, 36, 1],
-        ["20210325", null, 1],
+        [parseDate("20210125"), 0, null],
+        [null, 40, 1],
+        [parseDate("20210325"), null, 1],
       ],
       datapoints: [],
     }));
 
-    e(r.length).toEqual(3);
+    e(r && r.length).toEqual(3);
   });
 });
 

@@ -1,24 +1,11 @@
-import {parseDate, unixToBeeminderDateString} from "./time";
-import {unix} from "moment";
+import _ from "lodash";
+import {daysnap} from "./time";
 
 // TODO: Improve types throughout; get rid of `as [type]` as much as possible
 
 /* ~2038, specifically Rails's ENDOFDAYS+1 (was 2^31-2weeks)
  @type {Number} */
 const BDUSK = 2147317201;
-
-type UnixRoadall = [number | null, number | null, number | null][]
-
-/* Fixes the supplied unixtime to 00:00:00 on the same day (uses Moment)
- @param {Number} ut Unix time  */
-const daysnap = (ut: number): number => {
-  const d = unix(ut).utc();
-  d.hours(0);
-  d.minutes(0);
-  d.seconds(0);
-  d.milliseconds(0);
-  return d.unix();
-};
 
 // Helper for fillroad for propagating forward filling in all the nulls
 const nextrow = (
@@ -67,9 +54,8 @@ const tvr = (
 // Version of fillroad that assumes tini/vini is the first row of road
 const fillroadall = (roadall: Roadall, siru: number): Fullroad => {
   if (!roadall.length) return [];
-  const rd: UnixRoadall = roadall.map((r) => {
-    return [r[0] ? parseDate(r[0]) : null, r[1], r[2]];
-  });
+  // clone array to avoid modifying reference
+  const rd = _.cloneDeep(roadall);
   const tini = rd[0][0];
   const vini = rd[0][1];
   if (tini === null || vini === null) {
@@ -83,15 +69,10 @@ const fillroadall = (roadall: Roadall, siru: number): Fullroad => {
   }
   rd.forEach((e) => (e[2] = (null === e[2]) ? e[2] : e[2]*siru));
   const firstRow = [tini, vini, 0];
-  const unixRoadall = [
+  return [
     firstRow,
     ...rd,
-  ];
-  return unixRoadall.map((r) => [
-    unixToBeeminderDateString(r[0] as number),
-    r[1] as number,
-    r[2] as number,
-  ]);
+  ] as Fullroad;
 };
 
 export default fillroadall;

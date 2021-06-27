@@ -2,6 +2,7 @@ import {expect} from "@jest/globals";
 import Matchers = jest.Matchers;
 import fillroadall from "../fillroadall";
 import {UNIT_SECONDS} from "../constants";
+import {parseDate} from "../time";
 
 interface MyMatchers<R> extends Matchers<R> {
   toFuzzyEqual(expected: number): R;
@@ -28,7 +29,11 @@ expect.extend({
 
 export const e = expect as never as <T>(actual: T) => MyMatchers<T>;
 
-export function makeGoal(g: Partial<Goal> = {}): Goal {
+type DatapointInput = Omit<Datapoint, "timestamp"> & {timestamp?: number};
+type GoalInput = Partial<Omit<Goal, "datapoints">>
+  & {datapoints?: DatapointInput[]}
+
+export function makeGoal(g: GoalInput = {}): Goal {
   const {
     slug = "the_slug",
     aggday = "last",
@@ -47,7 +52,10 @@ export function makeGoal(g: Partial<Goal> = {}): Goal {
     runits,
     roadall,
     fullroad,
-    datapoints,
+    datapoints: datapoints.map((d: DatapointInput) => ({
+      timestamp: parseDate(d.daystamp),
+      ...d,
+    })),
     fineprint,
   };
 }
